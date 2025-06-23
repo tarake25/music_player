@@ -1,9 +1,7 @@
 import tkinter as tk
 import os
 from pygame import mixer
-from functools import partial
 from tkinter import filedialog
-import time
 
 class MusicPlayer:
     def __init__(self, root):
