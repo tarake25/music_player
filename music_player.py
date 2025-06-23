@@ -22,7 +22,8 @@ class MusicPlayer:
         self.LBL_STYLE = {"font": ("Segoe UI", 11), "bg": "#1e1e1e", "fg": "white", "anchor": "w", "padx": 10}
 
         self.setup_ui()
-
+        self.root.bind("<Return>", self.on_enter_prece) 
+        self.root.bind("<space>", self.on_space_prece)
         if self.music:
             self.play_song(self.t)
 
@@ -129,7 +130,10 @@ class MusicPlayer:
                 self.root.after(1000, self.update_progress)
             except:
                 pass
-
+    def on_enter_prece(self,event):
+        self.play_song(self.t)
+    def on_space_prece(self,event):
+        self.pause()
 if __name__ == '__main__':
     root = tk.Tk()
     app = MusicPlayer(root)
