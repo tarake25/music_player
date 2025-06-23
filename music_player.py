@@ -2,75 +2,137 @@ import tkinter as tk
 import os
 from pygame import mixer
 from functools import partial
+from tkinter import filedialog
+import time
 
-# the music player functios for the buttom events
-mixer.init()
+class MusicPlayer:
+    def __init__(self, root):
+        self.root = root
+        self.t = 0  # current song index
+        self.k = 1  # 1 = default folder, 2 = user folder
+        self.label = []
+        self.folder_path = 'MUSIC'
+        self.music = [f for f in os.listdir(self.folder_path) if f.endswith(".mp3")]
 
-def next():
-    pass
-def prev():
-    pass
-def puse():
-    mixer.music.pause()
-def play():
-    mixer.music.play()
-def add_v():
-    mixer.music.set_volume(mixer.music.get_volume()+0.1)
-def del_v():
-    mixer.music.set_volume(mixer.music.get_volume()-0.1)
-def play_song(i):
-    mixer.music.load(f"MUSIC\{i}")
-    mixer.music.set_volume(0.5)
-    mixer.music.play()
+        mixer.init()
 
+        self.root.geometry("700x550")
+        self.root.title("\U0001F3B5 Music Player")
+        self.root.config(bg="#1e1e1e")
 
+        self.BTN_STYLE = {"font": ("Segoe UI", 11), "bg": "#2c3e50", "fg": "white", "activebackground": "#34495e", "bd": 0, "padx": 10, "pady": 5}
+        self.LBL_STYLE = {"font": ("Segoe UI", 11), "bg": "#1e1e1e", "fg": "white", "anchor": "w", "padx": 10}
 
-root = tk.Tk()
-root.geometry('600x600')
-root.title('Music Player')
+        self.setup_ui()
 
-# Create a Frame to hold the the butoms
-frame = tk.Frame(root)
-frame.grid()
+        if self.music:
+            self.play_song(self.t)
 
-# Create a Frame to hold the the labels names of the music
-frame_2 = tk.Frame(root)
-frame_2.grid()
+    def setup_ui(self):
+        self.frame1 = tk.Frame(self.root, bg="#1e1e1e")
+        self.frame1.pack(side='top', fill='x', pady=10)
 
-# List to store all label references
-labels = []
+        self.frame2 = tk.Frame(self.root, bg="#1e1e1e")
+        self.frame2.pack(fill='both', expand=True, padx=10)
 
-# Function to update wraplength of all labels when the window resizes
-def update_wrap(event):
-    for lbl in labels:
-        lbl.config(wraplength=min(event.width, 400))
+        self.frame3 = tk.Frame(self.root, bg="#1e1e1e")
+        self.frame3.pack(side='bottom', fill='x', pady=10)
 
-# Load music file names
-music_files = os.listdir("MUSIC")
+        self.frame4 = tk.Frame(self.root, bg="#1e1e1e")
+        self.frame4.pack(side='bottom', fill='x', padx=10, pady=5)
 
-# Create a label for each file
-for filename in music_files:
-    label = tk.Label(
-        frame,
-        text=filename,
-        justify="left",
-        anchor="nw"
-    )
+        tk.Label(self.frame1, text='\U0001F3B6 Music Player', font=("Segoe UI", 16, "bold"), bg="#1e1e1e", fg="white").pack(side="left", padx=10)
+        self.music_playing = tk.Label(self.frame1, text='Nothing Playing', font=("Segoe UI", 12), bg="#1e1e1e", fg="lightgray")
+        self.music_playing.pack(side="left", padx=20)
+        tk.Button(self.frame1, text="Choose Folder", command=self.choose_folder, **self.BTN_STYLE).pack(side="right", padx=10)
 
-    label.pack()
-    butun=tk.Button(frame,text='Play music',command=partial(play_song,filename))
-    butun.pack()
-    labels.append(label)
+        self.list_music = tk.Frame(self.frame2, bg="#1e1e1e")
+        self.list_music.pack(fill='both', expand=True)
 
-pus = tk.Button(root,text='puse',command= partial(puse))
-pus.grid(column=0, row=1)
+        for i, song in enumerate(self.music):
+            lbl = tk.Label(self.list_music, text=f"\u266B {song}", **self.LBL_STYLE)
+            lbl.pack(fill='x', pady=1)
+            self.label.append(lbl)
 
-add = tk.Button(root,text='+++++',command= partial(add_v))
-add.grid(column=1, row=1)
+        buttons = [
+            ("Prev", self.prev),
+            ("Play", lambda: self.play_song(self.t)),
+            ("Pause", self.pause),
+            ("Next", self.next),
+            ("Vol +", self.add_v),
+            ("Vol -", self.del_v)
+        ]
 
-nex = tk.Button(root,text='Next',command= partial(next))
-nex.grid(column=2, row=1)
-# Bind resize event to the frame
-frame.bind("<Configure>", update_wrap)
+        for text, cmd in buttons:
+            tk.Button(self.frame3, text=text, command=cmd, **self.BTN_STYLE).pack(side="left", padx=5)
 
-root.mainloop()
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = tk.Scale(self.frame4, variable=self.progress_var, from_=0, to=100, orient='horizontal', showvalue=False, troughcolor='#34495e', bg="#1e1e1e", fg="white", highlightthickness=0)
+        self.progress_bar.pack(fill='x')
+
+    def choose_folder(self):
+        self.k = 2
+        self.folder_path = filedialog.askdirectory(title="Choose a folder")
+        if not self.folder_path:
+            return
+        self.music = [f for f in os.listdir(self.folder_path) if f.endswith(".mp3")]
+        self.t = 0
+        for lbl in self.label:
+            lbl.destroy()
+        self.label.clear()
+        for i, song in enumerate(self.music):
+            lbl = tk.Label(self.list_music, text=f"\u266B {song}", **self.LBL_STYLE)
+            lbl.pack(fill='x', pady=1)
+            self.label.append(lbl)
+        if self.music:
+            self.play_song(self.t)
+
+    def next(self):
+        if self.t < len(self.music) - 1:
+            self.t += 1
+            self.play_song(self.t)
+
+    def prev(self):
+        if self.t > 0:
+            self.t -= 1
+            self.play_song(self.t)
+
+    def pause(self):
+        mixer.music.pause()
+        self.highlight_current()
+
+    def add_v(self):
+        volume = mixer.music.get_volume()
+        mixer.music.set_volume(min(volume + 0.1, 1.0))
+
+    def del_v(self):
+        volume = mixer.music.get_volume()
+        mixer.music.set_volume(max(volume - 0.1, 0.0))
+
+    def play_song(self, i):
+        path = os.path.join(self.folder_path if self.k == 2 else "MUSIC", self.music[i])
+        mixer.music.load(path)
+        mixer.music.set_volume(0.5)
+        mixer.music.play()
+        self.highlight_current()
+        self.update_progress()
+
+    def highlight_current(self):
+        self.music_playing.config(text=f"Now Playing: {self.music[self.t]}")
+        for i, lbl in enumerate(self.label):
+            lbl.config(bg="#1e1e1e")
+        self.label[self.t].config(bg="#3498db")
+
+    def update_progress(self):
+        if mixer.music.get_busy():
+            try:
+                current_pos = mixer.music.get_pos() / 1000  # in seconds
+                self.progress_var.set(current_pos)
+                self.root.after(1000, self.update_progress)
+            except:
+                pass
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    app = MusicPlayer(root)
+    root.mainloop()
